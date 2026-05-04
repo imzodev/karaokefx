@@ -38,7 +38,10 @@ def cli():
 @click.option("--font", default=None, help="Custom font file (.ttf/.otf)")
 @click.option("-r", "--resolution", default="1920x1080", help="Video resolution WxH")
 @click.option("-f", "--fps", default=config.DEFAULT_FPS, help="Frames per second")
-def generate(audio, lyrics, output, background, font, resolution, fps):
+@click.option("--video-loop", default=None, help="Path to background video (looped + dimmed)")
+@click.option("--dim", "dim_opacity", default=0.4, type=float,
+              help="Dim opacity for video-loop background (0.0=nothing, 1.0=fully dark)")
+def generate(audio, lyrics, output, background, font, resolution, fps, video_loop, dim_opacity):
     """Generate a karaoke video from audio + lyrics."""
     from .renderer.composit import generate_video
 
@@ -61,11 +64,17 @@ def generate(audio, lyrics, output, background, font, resolution, fps):
         click.echo(f"Invalid resolution format: {resolution} (use WxH, e.g. 1920x1080)", err=True)
         sys.exit(1)
 
+    if background == "video-loop" and not video_loop:
+        click.echo("Error: --video-loop is required when using background 'video-loop'", err=True)
+        sys.exit(1)
+
     click.echo(f"Generating karaoke video...")
-    click.echo(f"  Audio:   {audio}")
-    click.echo(f"  Lyrics:  {lyrics}")
-    click.echo(f"  Output:  {output}")
-    click.echo(f"  BG:      {background}")
+    click.echo(f"  Audio:      {audio}")
+    click.echo(f"  Lyrics:     {lyrics}")
+    click.echo(f"  Output:     {output}")
+    click.echo(f"  Background: {background}")
+    if video_loop:
+        click.echo(f"  Video-loop: {video_loop} (dim={dim_opacity})")
 
     generate_video(
         audio_path=str(audio_path),
@@ -75,6 +84,8 @@ def generate(audio, lyrics, output, background, font, resolution, fps):
         font_path=font,
         resolution=res,
         fps=fps,
+        video_loop_path=video_loop,
+        dim_opacity=dim_opacity,
     )
 
     click.echo(f"Done! Video saved to: {output}")

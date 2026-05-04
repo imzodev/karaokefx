@@ -251,6 +251,130 @@ def render_background_video(
     shutil.rmtree(frames_dir)
 
 
+def generate_video_loop(
+    frame_size: Tuple[int, int],
+    time: float,
+    video_path: str,
+    volume: float = 0.0,
+) -> Image.Image:
+    """Use a video frame as background (looped if shorter than total duration).
+
+    The actual looping is handled at the clip-level in composit.py.
+    This function returns a single frame from the video at `time % clip_duration`.
+
+    Args:
+        frame_size: (width, height)
+        time: current time in seconds
+        video_path: path to background video file
+        volume: not used here (kept for API compat)
+
+    Returns:
+        PIL Image of the video frame at the current time
+    """
+    import cv2
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise FileNotFoundError(f"Cannot open video: {video_path}")
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    duration = frame_count / fps if fps > 0 else 0
+
+    if duration > 0:
+        loop_time = time % duration
+        frame_idx = int(loop_time * fps)
+    else:
+        frame_idx = 0
+
+    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+    ret, cv2_frame = cap.read()
+    cap.release()
+
+    if not ret:
+        # Fallback: black frame
+        return Image.new("RGB", frame_size, (0, 0, 0))
+
+    # Convert BGR → RGB
+    frame_rgb = cv2.cvtColor(cv2_frame, cv2.COLOR_BGR2RGB)
+
+    # Resize to target frame_size
+    pil_img = Image.fromarray(frame_rgb)
+    pil_img = pil_img.resize(frame_size, Image.LANCZOS)
+
+    return pil_img
+
+
+def render_video_loop_clip(
+    video_path: str,
+    frame_size: Tuple[int, int],
+    duration: float,
+    fps: int,
+    output_path: str,
+    dim_opacity: float = 0.4,
+) -> None:
+    """Render a video-loop background with a dimmed overlay.
+
+    Args:
+        video_path: path to background video (will be looped)
+        frame_size: (width, height)
+        duration: total video duration in seconds
+        fps: frames per second
+        output_path: where to save the video
+        dim_opacity: darkness of the overlay (0.0 = no dim, 1.0 = fully dark)
+    """
+    import cv2
+    import subprocess
+    from pathlib import Path
+
+    output_dir = Path(output_path).parent
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise FileNotFoundError(f"Cannot open video: {video_path}")
+
+    video_fps = cap.get(cv2.CAP_PROP_FPS)
+    video_frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    video_duration = video_frame_count / video_fps if video_fps > 0 else 0
+    cap.release()
+
+    num_frames = int(duration * fps)
+
+    frames_dir = output_dir / "._temp_frames"
+    frames_dir.mkdir(exist_ok=True)
+
+    print(f"Rendering video-loop background ({num_frames} frames, looping {video_path})...")
+    for i in range(num_frames):
+        t = i / fps
+        frame = generate_video_loop(frame_size, t, video_path)
+
+        if dim_opacity > 0:
+            # Apply dim overlay
+            dim_layer = Image.new("RGBA", frame_size, (0, 0, 0, int(255 * dim_opacity)))
+            frame = frame.convert("RGBA")
+            frame = Image.alpha_composite(frame, dim_layer)
+            frame = frame.convert("RGB")
+
+        frame.save(frames_dir / f"frame_{i:06d}.png", "PNG")
+
+        if i % 500 == 0 and i > 0:
+            print(f"  Frame {i}/{num_frames}")
+
+    print("Encoding video...")
+    cmd = [
+        "ffmpeg", "-y",
+        "-framerate", str(fps),
+        "-i", str(frames_dir / "frame_%06d.png"),
+        "-c:v", "libx264",
+        "-pix_fmt", "yuv420p",
+        "-an",
+        str(output_path),
+    ]
+    subprocess.run(cmd, check=True, capture_output=True)
+    shutil.rmtree(frames_dir)
+
+
 def _hex_to_rgb(hex_color: str) -> Tuple[int, int, int]:
     hex_color = hex_color.lstrip("#")
     return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))

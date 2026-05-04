@@ -25,6 +25,8 @@ BG_GEOMETRIC = "geometric"
 BG_WAVEFORM = "waveform"
 BG_VIDEO_LOOP = "video-loop"
 
+BG_VIDEO_LOOP = "video-loop"
+
 BACKGROUND_TYPES = [
     BG_ABSTRACT_GRADIENT,
     BG_PARTICLES,

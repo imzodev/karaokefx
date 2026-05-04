@@ -61,7 +61,7 @@ def generate_video(
     font_path: Optional[str] = None,
     resolution: Tuple[int, int] = (1920, 1080),
     fps: int = 30,
-    video_loop_path: Optional[str] = None,
+    video_clip_paths: Optional[list] = None,
     dim_opacity: float = 0.4,
 ) -> None:
     """Main entry point: compose audio + lyrics + background into a video.
@@ -70,12 +70,12 @@ def generate_video(
         audio_path: Path to audio file
         lyrics_path: Path to LRC or TXT lyrics file
         output_path: Where to save the output MP4
-        background: Background type name (abstract-gradient, particles, geometric, waveform)
+        background: Background type name (abstract-gradient, particles, geometric, waveform, video-loop)
         font_path: Optional .ttf/.otf font path
         resolution: (width, height) tuple
         fps: frames per second
-        video_loop_path: Optional path to a video file to use as background (looped + dimmed)
-        dim_opacity: When using video-loop, how much to dim the video (0.0 = none, 1.0 = full)
+        video_clip_paths: Optional list of video files to use as sequenced background
+        dim_opacity: When using video clips, how much to dim them (0.0 = none, 1.0 = full)
     """
     from ..sync import LyricLine
 
@@ -84,12 +84,12 @@ def generate_video(
 
     lyrics, duration = _get_lyrics(audio_path, lyrics_path)
 
-    # ── VIDEO-LOOP PATH ────────────────────────────────────────────────────────
-    if background == "video-loop" and video_loop_path:
-        _generate_with_video_loop(
+    # ── VIDEO SEQUENCE PATH ────────────────────────────────────────────────────
+    if background == "video-loop" and video_clip_paths:
+        _generate_with_video_sequence(
             audio_path=audio_path,
             lyrics=lyrics,
-            video_loop_path=video_loop_path,
+            video_clip_paths=video_clip_paths,
             output_path=str(output_path),
             font_path=font_path,
             resolution=resolution,
@@ -179,10 +179,30 @@ def generate_video(
     print(f"Done! Saved to: {output_path}")
 
 
-def _generate_with_video_loop(
+def _get_clip_info(clip_paths: list) -> list:
+    """Get duration and fps for each clip in the list.
+
+    Returns:
+        List of dicts: [{path, duration, fps, frame_count}, ...]
+    """
+    import cv2
+    info = []
+    for path in clip_paths:
+        cap = cv2.VideoCapture(path)
+        if not cap.isOpened():
+            raise FileNotFoundError(f"Cannot open video: {path}")
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        duration = frame_count / fps if fps > 0 else 0
+        cap.release()
+        info.append({"path": path, "duration": duration, "fps": fps, "frame_count": int(frame_count)})
+    return info
+
+
+def _generate_with_video_sequence(
     audio_path: str,
     lyrics,
-    video_loop_path: str,
+    video_clip_paths: list,
     output_path: str,
     font_path: Optional[str],
     resolution: Tuple[int, int],
@@ -190,23 +210,17 @@ def _generate_with_video_loop(
     dim_opacity: float,
     duration: float,
 ) -> None:
-    """Handle the video-loop + lyrics path.
+    """Handle multi-clip video sequence + lyrics path.
 
-    Uses the video as the background, dims it, then composites lyrics on top.
+    Clips are played in order, then loop if total duration < audio duration.
     """
     import cv2
-    from ..sync import LyricLine
 
-    cap = cv2.VideoCapture(video_loop_path)
-    if not cap.isOpened():
-        raise FileNotFoundError(f"Cannot open video: {video_loop_path}")
-    video_fps = cap.get(cv2.CAP_PROP_FPS)
-    video_frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-    video_duration = video_frame_count / video_fps if video_fps > 0 else 0
-    cap.release()
+    clip_info = _get_clip_info(video_clip_paths)
+    total_video_duration = sum(c["duration"] for c in clip_info)
 
-    if video_duration <= 0:
-        raise ValueError(f"Could not read video duration from: {video_loop_path}")
+    if total_video_duration <= 0:
+        raise ValueError("Could not read duration from any provided video clip")
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
@@ -215,15 +229,35 @@ def _generate_with_video_loop(
 
         total_frames = int(duration * fps)
 
-        print(f"Rendering {total_frames} frames (video-loop + lyrics)...")
+        print(f"Rendering {total_frames} frames (video sequence + lyrics)...")
         for i in range(total_frames):
             t = i / fps
 
-            # ── Video frame (looped) ────────────────────────────────────────────
-            loop_time = t % video_duration
-            frame_idx = int(loop_time * video_fps)
+            # ── Determine which clip frame we need ──────────────────────────────
+            if total_video_duration > 0:
+                loop_t = t % total_video_duration
+            else:
+                loop_t = 0
 
-            cap = cv2.VideoCapture(video_loop_path)
+            # Find which clip this time falls into
+            clip_accum = 0.0
+            clip_idx = 0
+            clip_offset = 0.0
+            for idx, ci in enumerate(clip_info):
+                if loop_t < clip_accum + ci["duration"]:
+                    clip_idx = idx
+                    clip_offset = loop_t - clip_accum
+                    break
+                clip_accum += ci["duration"]
+            else:
+                # Should not happen but safeguard
+                clip_idx = 0
+                clip_offset = 0
+
+            ci = clip_info[clip_idx]
+            frame_idx = int(clip_offset * ci["fps"])
+
+            cap = cv2.VideoCapture(ci["path"])
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
             ret, cv2_frame = cap.read()
             cap.release()
@@ -234,14 +268,14 @@ def _generate_with_video_loop(
             else:
                 bg = Image.new("RGB", resolution, (0, 0, 0))
 
-            # ── Dim overlay ────────────────────────────────────────────────────
+            # ── Dim overlay ──────────────────────────────────────────────────
             if dim_opacity > 0:
                 dim_layer = Image.new("RGBA", resolution, (0, 0, 0, int(255 * dim_opacity)))
                 bg_rgba = bg.convert("RGBA")
                 bg_rgba = Image.alpha_composite(bg_rgba, dim_layer)
                 bg = bg_rgba.convert("RGB")
 
-            # ── Lyrics overlay ─────────────────────────────────────────────────
+            # ── Lyrics overlay ──────────────────────────────────────────────
             t_ms = int(t * 1000)
             active_line = None
             prev_line = None
@@ -297,4 +331,4 @@ def _generate_with_video_loop(
         ]
         subprocess.run(cmd2, check=True, capture_output=True)
 
-    print(f"Video-loop render complete!")
+    print(f"Video sequence render complete!")

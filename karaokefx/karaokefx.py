@@ -38,10 +38,11 @@ def cli():
 @click.option("--font", default=None, help="Custom font file (.ttf/.otf)")
 @click.option("-r", "--resolution", default="1920x1080", help="Video resolution WxH")
 @click.option("-f", "--fps", default=config.DEFAULT_FPS, help="Frames per second")
-@click.option("--video-loop", default=None, help="Path to background video (looped + dimmed)")
+@click.option("--video-clips", default=None,
+              help="Comma-separated list of video clips to sequence (e.g. clip1.mp4,clip2.mp4)")
 @click.option("--dim", "dim_opacity", default=0.4, type=float,
-              help="Dim opacity for video-loop background (0.0=nothing, 1.0=fully dark)")
-def generate(audio, lyrics, output, background, font, resolution, fps, video_loop, dim_opacity):
+              help="Dim opacity for video background (0.0=nothing, 1.0=fully dark)")
+def generate(audio, lyrics, output, background, font, resolution, fps, video_clips, dim_opacity):
     """Generate a karaoke video from audio + lyrics."""
     from .renderer.composit import generate_video
 
@@ -64,17 +65,26 @@ def generate(audio, lyrics, output, background, font, resolution, fps, video_loo
         click.echo(f"Invalid resolution format: {resolution} (use WxH, e.g. 1920x1080)", err=True)
         sys.exit(1)
 
-    if background == "video-loop" and not video_loop:
-        click.echo("Error: --video-loop is required when using background 'video-loop'", err=True)
+    if background == "video-loop" and not video_clips:
+        click.echo("Error: --video-clips required when using background 'video-loop'", err=True)
         sys.exit(1)
+
+    # Parse comma-separated clips
+    clip_paths = None
+    if video_clips:
+        clip_paths = [p.strip() for p in video_clips.split(",") if p.strip()]
+        missing = [p for p in clip_paths if not Path(p).exists()]
+        if missing:
+            click.echo(f"Error: video clips not found: {missing}", err=True)
+            sys.exit(1)
 
     click.echo(f"Generating karaoke video...")
     click.echo(f"  Audio:      {audio}")
     click.echo(f"  Lyrics:     {lyrics}")
     click.echo(f"  Output:     {output}")
     click.echo(f"  Background: {background}")
-    if video_loop:
-        click.echo(f"  Video-loop: {video_loop} (dim={dim_opacity})")
+    if clip_paths:
+        click.echo(f"  Video clips: {clip_paths}")
 
     generate_video(
         audio_path=str(audio_path),
@@ -84,7 +94,7 @@ def generate(audio, lyrics, output, background, font, resolution, fps, video_loo
         font_path=font,
         resolution=res,
         fps=fps,
-        video_loop_path=video_loop,
+        video_clip_paths=clip_paths,
         dim_opacity=dim_opacity,
     )
 

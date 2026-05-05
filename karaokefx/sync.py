@@ -1,7 +1,7 @@
 """LRC and plain-text lyrics parsing and word-level sync utilities."""
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 from .config import LRC_TIMESTAMP_RE
@@ -38,9 +38,19 @@ def parse_lrc(lrc_path: str, audio_duration_ms: Optional[int] = None) -> Lyrics:
     pattern = re.compile(LRC_TIMESTAMP_RE)
 
     with open(lrc_path, "r", encoding="utf-8") as f:
+        active_text_color = "#FFFFFF"
+        active_highlight = "#FFD700"
+
         for raw in f:
             raw = raw.strip()
             if not raw:
+                continue
+
+            # Color tag — update active colors for subsequent lines
+            color_m = LRC_COLOR_TAG_RE.match(raw)
+            if color_m:
+                active_text_color = "#" + color_m.group(1)
+                active_highlight = active_text_color  # use same for highlight too
                 continue
 
             # Check for word-level timing: [00:12.00]<00:12.00>word<00:12.50>word
@@ -58,7 +68,8 @@ def parse_lrc(lrc_path: str, audio_duration_ms: Optional[int] = None) -> Lyrics:
                 text = m.group(4).strip()
 
                 # Use next line's start as our end_ms (filled in post-processing)
-                lines.append(LycLine(start_ms=start_ms, end_ms=start_ms, text=text))
+                lines.append(LyricLine(start_ms=start_ms, end_ms=start_ms, text=text,
+                               text_color=active_text_color, highlight_color=active_highlight))
 
     # Post-process: fill end_ms from next line's start
     for i in range(len(lines) - 1):

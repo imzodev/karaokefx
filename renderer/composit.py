@@ -146,7 +146,9 @@ def generate_video(
                     top_text = prev_line.text
                     top_img = draw_lyric_frame(
                         top_text, resolution, font_path=font_path,
-                        font_size=52, text_color="#888888", position="center",
+                        font_size=52,
+                        text_color=prev_line.text_color if prev_line else "#888888",
+                        highlight_color=prev_line.highlight_color if prev_line else "#FFD700", position="center",
                     )
                     bg.paste(top_img, (0, 0), top_img)
 
@@ -164,7 +166,9 @@ def generate_video(
                 else:
                     curr_img = draw_lyric_frame(
                         active_line.text, resolution, font_path=font_path,
-                        font_size=72, text_color="#FFFFFF", highlight_color="#FFD700",
+                        font_size=72,
+                        text_color=active_line.text_color,
+                        highlight_color=active_line.highlight_color,
                         position="bottom",
                     )
                 bg.paste(curr_img, (0, 0), curr_img)
@@ -331,7 +335,9 @@ def _generate_with_video_sequence(
                 else:
                     curr_img = draw_lyric_frame(
                         active_line.text, resolution, font_path=font_path,
-                        font_size=72, text_color="#FFFFFF", highlight_color="#FFD700",
+                        font_size=72,
+                        text_color=active_line.text_color,
+                        highlight_color=active_line.highlight_color,
                         position="bottom",
                     )
                 bg.paste(curr_img, (0, 0), curr_img)

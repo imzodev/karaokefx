@@ -125,7 +125,38 @@ python -m karaokefx.karaokefx generate \
 python -m karaokefx.karaokefx transcribe -a song.mp3 -o song.lrc --model small
 ```
 
-Model options: `tiny`, `base`, `small`, `medium`, `large` (default: `small`)
+**Options:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-a, --audio` | (required) | Audio file to transcribe |
+| `-o, --output` | `output.lrc` | Output LRC file path |
+| `-m, --model` | `small` | Whisper model size (see below) |
+| `-l, --language` | auto-detect | Language code (e.g. `en`, `de`, `es`, `fr`, `ja`) |
+
+**Whisper model sizes:**
+
+| Model | Size | Speed | Accuracy |
+|-------|------|-------|----------|
+| `tiny` | ~39 MB | Fastest | Lowest |
+| `base` | ~74 MB | Fast | Moderate |
+| `small` | ~244 MB | Medium | Good |
+| `medium` | ~769 MB | Slow | High |
+| `large` | ~1550 MB | Slowest | Highest |
+
+Use `small` as a default — good balance of speed and accuracy. Use `large` if you need the best possible transcription quality.
+
+**Language examples:**
+```bash
+# Auto-detect language
+python -m karaokefx.karaokefx transcribe -a song.mp3 -o song.lrc
+
+# Force German
+python -m karaokefx.karaokefx transcribe -a song.mp3 -o song.lrc --language de
+
+# Force English with large model
+python -m karaokefx.karaokefx transcribe -a song.mp3 -o song.lrc --language en --model large
+```
 
 ---
 

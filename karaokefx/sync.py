@@ -37,7 +37,7 @@ class LyricLine:
     start_ms: int       # Start time in milliseconds
     end_ms: int         # End time in milliseconds
     text: str           # Full line text
-    words: List[dict] = []  # [{text, start_ms, end_ms}, ...] or empty
+    words: List[dict] = field(default_factory=list)  # [{text, start_ms, end_ms}, ...] or empty
 
     @property
     def duration_ms(self) -> int:

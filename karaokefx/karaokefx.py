@@ -7,6 +7,7 @@ import click
 
 # Import submodules
 from . import config
+from . import __version__
 from .sync import parse_lrc, parse_plain_text
 from .transcribe import transcribe_audio, result_to_lrc
 
@@ -23,7 +24,7 @@ def parse_timestamp(ts: str) -> int:
 
 
 @click.group()
-@click.version_option(version=config.__version__)
+@click.version_option(version=__version__)
 def cli():
     """KaraokeFX — Generate karaoke videos from audio + lyrics."""
     pass

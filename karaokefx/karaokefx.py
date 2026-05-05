@@ -1,6 +1,20 @@
 """KaraokeFX — Main CLI entry point."""
 
 import sys
+import os
+
+# ── HEAVY DEBUG AT IMPORT TIME ──────────────────────────────────────────────
+sys.stderr.write(f"[DEBUG] Python: {sys.executable}\n")
+sys.stderr.write(f"[DEBUG] Version: {sys.version}\n")
+sys.stderr.write(f"[DEBUG] cwd: {os.getcwd()}\n")
+sys.stderr.write(f"[DEBUG] sys.path:\n")
+for p in sys.path:
+    sys.stderr.write(f"  {p}\n")
+sys.stderr.write(f"[DEBUG] __name__ = {__name__}\n")
+sys.stderr.flush()
+
+import traceback
+
 from pathlib import Path
 from typing import Optional
 
@@ -9,8 +23,17 @@ import click
 # Import submodules
 from . import config
 from . import __version__
+sys.stderr.write(f"[DEBUG] __version__ = {__version__}\n")
+sys.stderr.write(f"[DEBUG] config.BG_ABSTRACT_GRADIENT = {config.BG_ABSTRACT_GRADIENT}\n")
+sys.stderr.flush()
+
 from .sync import parse_lrc, parse_plain_text
+sys.stderr.write("[DEBUG] sync imported OK\n")
+sys.stderr.flush()
+
 from .transcribe import transcribe_audio, result_to_lrc
+sys.stderr.write("[DEBUG] transcribe imported OK\n")
+sys.stderr.flush()
 
 
 def parse_timestamp(ts: str) -> int:
@@ -46,6 +69,8 @@ def cli():
               help="Dim opacity for video background (0.0=nothing, 1.0=fully dark)")
 def generate(audio, lyrics, output, background, font, resolution, fps, video_clips, dim_opacity):
     """Generate a karaoke video from audio + lyrics."""
+    sys.stderr.write(f"[DEBUG] generate() called with audio={audio}\n")
+    sys.stderr.flush()
     from .renderer.composit import generate_video
 
     audio_path = Path(audio)
@@ -59,7 +84,6 @@ def generate(audio, lyrics, output, background, font, resolution, fps, video_cli
         click.echo(f"Error: Lyrics file not found: {lyrics}", err=True)
         sys.exit(1)
 
-    # Parse resolution
     try:
         w, h = map(int, resolution.split("x"))
         res = (w, h)
@@ -71,7 +95,6 @@ def generate(audio, lyrics, output, background, font, resolution, fps, video_cli
         click.echo("Error: --video-clips required when using background 'video-loop'", err=True)
         sys.exit(1)
 
-    # Parse comma-separated clips
     clip_paths = None
     if video_clips:
         clip_paths = [p.strip() for p in video_clips.split(",") if p.strip()]
@@ -111,6 +134,13 @@ def generate(audio, lyrics, output, background, font, resolution, fps, video_cli
 @click.option("-l", "--language", default=None, help="Language code (e.g. en, de)")
 def transcribe(audio, output, model, language):
     """Transcribe audio to LRC (lyrics) file using Whisper."""
+    sys.stderr.write(f"[DEBUG] transcribe() called!\n")
+    sys.stderr.write(f"[DEBUG]   audio={audio}\n")
+    sys.stderr.write(f"[DEBUG]   output={output}\n")
+    sys.stderr.write(f"[DEBUG]   model={model}\n")
+    sys.stderr.write(f"[DEBUG]   language={language}\n")
+    sys.stderr.flush()
+
     print(f"[KaraokeFX] Starting transcription...", flush=True)
     print(f"[KaraokeFX]   audio:   {audio}", flush=True)
     print(f"[KaraokeFX]   output:  {output}", flush=True)
@@ -118,14 +148,18 @@ def transcribe(audio, output, model, language):
     print(f"[KaraokeFX]   lang:    {language or 'auto-detect'}", flush=True)
     print(flush=True)
 
-    result = transcribe_audio(
-        audio_path=audio,
-        model_name=model,
-        language=language,
-    )
-
-    result_to_lrc(result, output)
-    print(f"\n[KaraokeFX] All done! LRC file: {output}", flush=True)
+    try:
+        result = transcribe_audio(
+            audio_path=audio,
+            model_name=model,
+            language=language,
+        )
+        result_to_lrc(result, output)
+        print(f"\n[KaraokeFX] All done! LRC file: {output}", flush=True)
+    except Exception as e:
+        sys.stderr.write(f"[ERROR] {type(e).__name__}: {e}\n")
+        traceback.print_exc()
+        raise
 
 
 @cli.command()
@@ -138,7 +172,6 @@ def preview(audio, lyrics):
     lyrics_path = Path(lyrics)
     is_lrc = lyrics_path.suffix.lower() == ".lrc"
 
-    # Get audio duration
     duration, sr = librosa.load(audio, sr=None, duration=None)
     total_ms = int(duration * 1000)
 
@@ -193,7 +226,6 @@ def batch(input_dir, output_dir, background, font, resolution, fps, video_clips,
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    # Find all audio files
     audio_exts = {".mp3", ".wav", ".m4a", ".flac", ".ogg"}
     audio_files = sorted([f for f in input_path.iterdir() if f.suffix.lower() in audio_exts])
 
@@ -201,14 +233,12 @@ def batch(input_dir, output_dir, background, font, resolution, fps, video_clips,
         click.echo(f"No audio files found in {input_dir}")
         return
 
-    # Parse video clips
     clip_paths = None
     if video_clips:
         clip_paths = [p.strip() for p in video_clips.split(",") if p.strip()]
 
     click.echo(f"Batch processing {len(audio_files)} file(s)...")
 
-    # Resolve resolution
     try:
         w, h = map(int, resolution.split("x"))
         res = (w, h)
@@ -267,3 +297,7 @@ def batch(input_dir, output_dir, background, font, resolution, fps, video_clips,
 
 # Expose parse_timestamp for testing
 __all__ = ["parse_timestamp"]
+
+# ── ENTRY POINT ──────────────────────────────────────────────────────────────
+sys.stderr.write("[DEBUG] End of module — cli() ready\n")
+sys.stderr.flush()

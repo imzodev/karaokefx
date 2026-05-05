@@ -1,12 +1,20 @@
 """LRC and plain-text lyrics parsing and word-level sync utilities."""
 
+import sys
+sys.stderr.write("[sync.py] MODULE LOADING\n")
+sys.stderr.flush()
+
 import re
 from dataclasses import dataclass, field
 from typing import List, Optional
 
 import librosa
+sys.stderr.write(f"[sync.py] librosa imported. version: {librosa.__version__}\n")
+sys.stderr.flush()
 
 from .config import LRC_TIMESTAMP_RE
+sys.stderr.write(f"[sync.py] LRC_TIMESTAMP_RE imported: {LRC_TIMESTAMP_RE}\n")
+sys.stderr.flush()
 
 
 # Color tag regex: [color:#RRGGBB]
@@ -19,11 +27,18 @@ def detect_bpm(audio_path: str) -> float:
     Returns:
         BPM as float (fallback: 120.0 if detection fails)
     """
+    sys.stderr.write(f"[detect_bpm] called with {audio_path}\n")
+    sys.stderr.flush()
     try:
         y, sr = librosa.load(audio_path, sr=None, duration=None)
         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-        return float(tempo) if tempo.size > 0 else 120.0
-    except Exception:
+        result = float(tempo) if tempo.size > 0 else 120.0
+        sys.stderr.write(f"[detect_bpm] result: {result}\n")
+        sys.stderr.flush()
+        return result
+    except Exception as e:
+        sys.stderr.write(f"[detect_bpm] ERROR: {type(e).__name__}: {e}\n")
+        sys.stderr.flush()
         return 120.0
 
 
@@ -55,13 +70,10 @@ class Lyrics:
 
 
 def parse_lrc(lrc_path: str, audio_duration_ms: Optional[int] = None) -> Lyrics:
-    """Parse an LRC file into Lyrics object.
+    """Parse an LRC file into Lyrics object."""
+    sys.stderr.write(f"[parse_lrc] called with {lrc_path}, audio_duration_ms={audio_duration_ms}\n")
+    sys.stderr.flush()
 
-    Supports:
-      [mm:ss.xx] lyric line            — line-level timestamps
-      [mm:ss.xx] <mm:ss.xx>word ...   — word-level timestamps
-      [color:#RRGGBB]                  — color tag for subsequent lines
-    """
     lines: List[LyricLine] = []
     pattern = re.compile(LRC_TIMESTAMP_RE)
 
@@ -74,7 +86,6 @@ def parse_lrc(lrc_path: str, audio_duration_ms: Optional[int] = None) -> Lyrics:
             if not raw:
                 continue
 
-            # Color tag — update active colors for subsequent lines
             color_m = LRC_COLOR_TAG_RE.match(raw)
             if color_m:
                 hex_color = "#" + color_m.group(1)
@@ -82,7 +93,6 @@ def parse_lrc(lrc_path: str, audio_duration_ms: Optional[int] = None) -> Lyrics:
                 active_highlight = hex_color
                 continue
 
-            # Check for word-level timing: [00:12.00]<00:12.00>word<00:12.50>word
             word_line = _parse_word_level_line(raw, pattern)
             if word_line is not None:
                 word_line.text_color = active_text_color
@@ -90,7 +100,6 @@ def parse_lrc(lrc_path: str, audio_duration_ms: Optional[int] = None) -> Lyrics:
                 lines.append(word_line)
                 continue
 
-            # Line-level timing
             m = pattern.match(raw)
             if m:
                 minutes = int(m.group(1))
@@ -100,13 +109,12 @@ def parse_lrc(lrc_path: str, audio_duration_ms: Optional[int] = None) -> Lyrics:
 
                 lines.append(LyricLine(
                     start_ms=start_ms,
-                    end_ms=start_ms,  # filled in post-processing
+                    end_ms=start_ms,
                     text=text,
                     text_color=active_text_color,
                     highlight_color=active_highlight,
                 ))
 
-    # Post-process: fill end_ms from next line's start
     for i in range(len(lines) - 1):
         if lines[i].end_ms == lines[i].start_ms:
             lines[i] = LyricLine(
@@ -118,7 +126,6 @@ def parse_lrc(lrc_path: str, audio_duration_ms: Optional[int] = None) -> Lyrics:
                 highlight_color=lines[i].highlight_color,
             )
 
-    # Last line: use actual audio duration if provided, else +30s fallback
     if lines:
         final_end = audio_duration_ms if audio_duration_ms else lines[-1].start_ms + 30_000
         lines[-1] = LyricLine(
@@ -130,15 +137,13 @@ def parse_lrc(lrc_path: str, audio_duration_ms: Optional[int] = None) -> Lyrics:
             highlight_color=lines[-1].highlight_color,
         )
 
+    sys.stderr.write(f"[parse_lrc] Done — {len(lines)} lines parsed\n")
+    sys.stderr.flush()
     return Lyrics(lines=lines, source_format="lrc")
 
 
 def _parse_word_level_line(raw: str, pattern: re.Pattern) -> Optional[LyricLine]:
-    """Parse a line with embedded word-level timestamps like:
-    [00:12.00]<00:12.00>Hello <00:12.50>World
-
-    Returns LyricLine or None if no word-level timing found.
-    """
+    """Parse a line with embedded word-level timestamps."""
     m = pattern.match(raw)
     if not m or "<" not in raw:
         return None
@@ -157,7 +162,6 @@ def _parse_word_level_line(raw: str, pattern: re.Pattern) -> Optional[LyricLine]
         w_text = wm.group(4).strip()
         words.append({"text": w_text, "start_ms": w_ms, "end_ms": w_ms})
 
-    # Fill end_ms between consecutive words
     for i in range(len(words) - 1):
         words[i]["end_ms"] = words[i + 1]["start_ms"]
 
@@ -167,13 +171,10 @@ def _parse_word_level_line(raw: str, pattern: re.Pattern) -> Optional[LyricLine]
 
 
 def parse_plain_text(txt_path: str, total_duration_ms: int, bpm: float = 0.0) -> Lyrics:
-    """Parse a plain-text lyrics file, distributing lines across the song duration.
+    """Parse a plain-text lyrics file, distributing lines across the song duration."""
+    sys.stderr.write(f"[parse_plain_text] called with {txt_path}, total_duration_ms={total_duration_ms}, bpm={bpm}\n")
+    sys.stderr.flush()
 
-    Args:
-        txt_path: path to .txt file
-        total_duration_ms: total audio duration in milliseconds
-        bpm: optional BPM for beat-synchronized distribution (0 = uniform spacing)
-    """
     with open(txt_path, "r", encoding="utf-8") as f:
         raw_lines = [ln.strip() for ln in f if ln.strip()]
 
@@ -181,7 +182,6 @@ def parse_plain_text(txt_path: str, total_duration_ms: int, bpm: float = 0.0) ->
         return Lyrics(lines=[], source_format="plain")
 
     if bpm > 0:
-        # Beat-synchronized distribution
         ms_per_beat = bpm_to_ms_per_beat(bpm)
         lines = []
         for i, text in enumerate(raw_lines):
@@ -189,7 +189,6 @@ def parse_plain_text(txt_path: str, total_duration_ms: int, bpm: float = 0.0) ->
             end_ms = int((i + 1) * ms_per_beat) if i < len(raw_lines) - 1 else total_duration_ms
             lines.append(LyricLine(start_ms=start_ms, end_ms=end_ms, text=text))
     else:
-        # Uniform distribution
         interval = total_duration_ms / len(raw_lines)
         lines = []
         for i, text in enumerate(raw_lines):
@@ -197,4 +196,6 @@ def parse_plain_text(txt_path: str, total_duration_ms: int, bpm: float = 0.0) ->
             end_ms = int((i + 1) * interval) if i < len(raw_lines) - 1 else total_duration_ms
             lines.append(LyricLine(start_ms=start_ms, end_ms=end_ms, text=text))
 
+    sys.stderr.write(f"[parse_plain_text] Done — {len(lines)} lines parsed\n")
+    sys.stderr.flush()
     return Lyrics(lines=lines, source_format="plain")

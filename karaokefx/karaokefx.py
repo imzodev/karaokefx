@@ -180,5 +180,104 @@ def gifify(input, output, width, fps):
     _gifify(input, output, width=width, fps=fps)
     click.echo(f"GIF saved to: {output}")
 
+
+
+def resolve_bg_to_clips(bg: str, video_clips: Optional[list]) -> Optional[list]:
+    """Back-compat helper — video-clips already parsed in generate."""
+    return video_clips
+
+
+@cli.command()
+@click.option("--input-dir", required=True, help="Directory containing audio files")
+@click.option("--output-dir", required=True, help="Directory for output videos")
+@click.option("-b", "--background", default=config.BG_ABSTRACT_GRADIENT,
+              type=click.Choice(config.BACKGROUND_TYPES), help="Background type")
+@click.option("--font", default=None, help="Custom font file (.ttf/.otf)")
+@click.option("-r", "--resolution", default="1920x1080", help="Video resolution WxH")
+@click.option("-f", "--fps", default=config.DEFAULT_FPS, help="Frames per second")
+@click.option("--video-clips", default=None, help="Comma-separated video clips (used for all songs)")
+@click.option("--dim", "dim_opacity", default=0.4, type=float, help="Dim opacity for video background")
+@click.option("--workers", default=1, type=int, help="Parallel workers (default: 1)")
+def batch(input_dir, output_dir, background, font, resolution, fps, video_clips, dim_opacity, workers):
+    """Batch process multiple audio+lyrics pairs into karaoke videos."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from renderer.composit import generate_video
+
+    input_path = Path(input_dir)
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # Find all audio files
+    audio_exts = {".mp3", ".wav", ".m4a", ".flac", ".ogg"}
+    audio_files = sorted([f for f in input_path.iterdir() if f.suffix.lower() in audio_exts])
+
+    if not audio_files:
+        click.echo(f"No audio files found in {input_dir}")
+        return
+
+    # Parse video clips
+    clip_paths = None
+    if video_clips:
+        clip_paths = [p.strip() for p in video_clips.split(",") if p.strip()]
+
+    click.echo(f"Batch processing {len(audio_files)} file(s)...")
+
+    # Resolve resolution
+    try:
+        w, h = map(int, resolution.split("x"))
+        res = (w, h)
+    except Exception:
+        click.echo(f"Invalid resolution: {resolution}", err=True)
+        return
+
+    def process_one(audio_file: Path) -> tuple[str, bool, str]:
+        lrc_file = audio_file.with_suffix(".lrc")
+        out_file = output_path / (audio_file.stem + ".mp4")
+
+        if not lrc_file.exists():
+            return (audio_file.name, False, f"Lyrics file not found: {lrc_file}")
+
+        try:
+            generate_video(
+                audio_path=str(audio_file),
+                lyrics_path=str(lrc_file),
+                output_path=str(out_file),
+                background=background,
+                font_path=font,
+                resolution=res,
+                fps=fps,
+                video_clip_paths=clip_paths,
+                dim_opacity=dim_opacity,
+            )
+            return (audio_file.name, True, "OK")
+        except Exception as e:
+            return (audio_file.name, False, str(e))
+
+    successes = 0
+    failures = 0
+
+    if workers > 1:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {executor.submit(process_one, af): af for af in audio_files}
+            for future in as_completed(futures):
+                name, ok, msg = future.result()
+                if ok:
+                    successes += 1
+                    click.echo(f"  ✅ {name}")
+                else:
+                    failures += 1
+                    click.echo(f"  ❌ {name}: {msg}")
+    else:
+        for af in audio_files:
+            name, ok, msg = process_one(af)
+            if ok:
+                successes += 1
+                click.echo(f"  ✅ {name}")
+            else:
+                failures += 1
+                click.echo(f"  ❌ {name}: {msg}")
+
+    click.echo(f"\nDone! {successes} succeeded, {failures} failed.")
+
 # Expose parse_timestamp for testing
 __all__ = ["parse_timestamp"]

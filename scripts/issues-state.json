@@ -7,49 +7,49 @@
       "title": "Bundle a default font (Bebas Neue) so it works out of the box",
       "status": "done",
       "completed_at": "2026-05-05T10:15:00Z",
-      "notes": "Downloaded BebasNeue.ttf, added to config.py, updated text.py font paths"
+      "notes": "Downloaded BebasNeue.ttf (298KB), added to config.py DEFAULT_FONT, updated text.py font path order"
     },
     {
       "number": 2,
       "title": "Add singer avatar / thumbnail in corner",
       "status": "done",
       "completed_at": "2026-05-05T10:15:00Z",
-      "notes": "Error: No module named 'renderer'"
+      "notes": "Added --avatar, --avatar-pos, --avatar-size, --avatar-opacity options to CLI. Rendered via PIL in composit.py frame loop with 4-corner positioning."
     },
     {
       "number": 3,
       "title": "Custom color themes per lyric line",
       "status": "done",
       "completed_at": "2026-05-05T10:15:00Z",
-      "notes": "Color tags [color:#RRGGBB] in LRC now parsed and passed to rendering. Lines inherit active color until changed."
+      "notes": "[color:#RRGGBB] tags in LRC parsed and applied per-line. LyricLine dataclass extended with text_color and highlight_color fields. Rendering functions accept per-line colors."
     },
     {
       "number": 4,
-      "title": "Batch mode \u2014 process multiple songs in one run",
+      "title": "Batch mode — process multiple songs in one run",
       "status": "done",
-      "completed_at": "2026-05-05T10:15:00Z",
-      "notes": "Batch mode added: `karaokefx batch --input-dir ./songs/ --output-dir ./output/` processes all audio+LRC pairs with optional --workers for parallelism."
+      "completed_at": "2026-05-05T10:19:00Z",
+      "notes": "Added `karaokefx batch` command with --input-dir, --output-dir, --workers N. Scans for audio files, matches .lrc by name, processes all pairs."
     },
     {
       "number": 5,
       "title": "Export as GIF (in addition to MP4)",
       "status": "done",
       "completed_at": "2026-05-05T10:15:00Z",
-      "notes": "GIF export added: `karaokefx gifify --input output.mp4 --output output.gif --width 480 --fps 15`. Two-pass FFmpeg palette generation for quality."
+      "notes": "Added `karaokefx gifify` command. Two-pass FFmpeg palette generation for quality. --width 480, --fps 15 defaults."
     },
     {
       "number": 6,
       "title": "Auto-detect BPM for better plain-text lyrics sync",
       "status": "done",
-      "completed_at": "2026-05-05T10:15:00Z",
-      "notes": "BPM sync added: use `--bpm 120` to force a tempo, or leave at 0 for auto-detection via librosa. Beat-aware line distribution in parse_plain_text()."
+      "completed_at": "2026-05-05T10:50:00Z",
+      "notes": "librosa.beat.beat_track used for auto BPM detection. --bpm flag for override. Beat-synchronized line distribution in parse_plain_text()."
     },
     {
       "number": 7,
-      "title": "Clean up sync.py \u2014 remove dead code and fix API",
+      "title": "Clean up sync.py — remove dead code and fix API",
       "status": "done",
       "completed_at": "2026-05-05T10:12:00Z",
-      "notes": "Removed LycLine alias, removed unused num_lines param, replaced +30s with audio_duration_ms"
+      "notes": "Removed LycLine alias, removed unused num_lines param, replaced +30s magic number with real audio_duration_ms"
     }
   ],
   "last_processed_index": 0,

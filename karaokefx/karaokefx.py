@@ -129,7 +129,6 @@ def transcribe(audio, output, model, language):
 @click.option("-l", "--lyrics", required=True, help="Lyrics file (.lrc or .txt)")
 def preview(audio, lyrics):
     """Preview lyrics sync timing in the terminal (quick check)."""
-    from tqdm import tqdm
     import librosa
 
     lyrics_path = Path(lyrics)

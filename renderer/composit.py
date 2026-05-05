@@ -36,6 +36,18 @@ BG_GENERATORS = {
 }
 
 
+def _get_current_word_idx(words: list, t_ms: int) -> int:
+    """Return the index of the currently active word given a timestamp in ms.
+
+    Returns the last word whose start_ms <= t_ms, or 0 if none are active yet.
+    """
+    active_idx = 0
+    for i, w in enumerate(words):
+        if t_ms >= w["start_ms"]:
+            active_idx = i
+    return active_idx
+
+
 def _get_lyrics(audio_path: str, lyrics_path: str):
     """Parse lyrics file. Returns (Lyrics object, duration_seconds)."""
     from ..sync import parse_lrc, parse_plain_text
@@ -138,11 +150,23 @@ def generate_video(
                     )
                     bg.paste(top_img, (0, 0), top_img)
 
-                curr_img = draw_lyric_frame(
-                    active_line.text, resolution, font_path=font_path,
-                    font_size=72, text_color="#FFFFFF", highlight_color="#FFD700",
-                    position="bottom",
-                )
+                # Use word-by-word highlighting if word-level timing is available
+                if active_line.words:
+                    curr_img = draw_word_highlight(
+                        words=active_line.words,
+                        current_word_idx=_get_current_word_idx(active_line.words, t_ms),
+                        frame_size=resolution,
+                        font_path=font_path,
+                        font_size=72,
+                        text_color="#FFFFFF",
+                        highlight_color="#FFD700",
+                    )
+                else:
+                    curr_img = draw_lyric_frame(
+                        active_line.text, resolution, font_path=font_path,
+                        font_size=72, text_color="#FFFFFF", highlight_color="#FFD700",
+                        position="bottom",
+                    )
                 bg.paste(curr_img, (0, 0), curr_img)
 
             frame_path = frames_dir / f"frame_{i:06d}.png"
@@ -294,11 +318,22 @@ def _generate_with_video_sequence(
                     )
                     bg.paste(top_img, (0, 0), top_img)
 
-                curr_img = draw_lyric_frame(
-                    active_line.text, resolution, font_path=font_path,
-                    font_size=72, text_color="#FFFFFF", highlight_color="#FFD700",
-                    position="bottom",
-                )
+                if active_line.words:
+                    curr_img = draw_word_highlight(
+                        words=active_line.words,
+                        current_word_idx=_get_current_word_idx(active_line.words, t_ms),
+                        frame_size=resolution,
+                        font_path=font_path,
+                        font_size=72,
+                        text_color="#FFFFFF",
+                        highlight_color="#FFD700",
+                    )
+                else:
+                    curr_img = draw_lyric_frame(
+                        active_line.text, resolution, font_path=font_path,
+                        font_size=72, text_color="#FFFFFF", highlight_color="#FFD700",
+                        position="bottom",
+                    )
                 bg.paste(curr_img, (0, 0), curr_img)
 
             bg.save(frames_dir / f"frame_{i:06d}.png", "PNG")

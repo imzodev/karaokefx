@@ -2,6 +2,7 @@
 
 import sys
 from pathlib import Path
+from typing import Optional
 
 import click
 
@@ -33,7 +34,6 @@ def cli():
 @cli.command()
 @click.option("-a", "--audio", required=True, help="Audio file path")
 @click.option("-l", "--lyrics", required=True, help="Lyrics file (.lrc or .txt)")
-@click.option("--bpm", default=0.0, type=float, help="Override BPM for beat-sync (0=auto-detect or uniform)")
 @click.option("-o", "--output", default="output.mp4", help="Output video path")
 @click.option("-b", "--background", default=config.BG_ABSTRACT_GRADIENT,
               type=click.Choice(config.BACKGROUND_TYPES), help="Background type")
@@ -88,17 +88,8 @@ def generate(audio, lyrics, output, background, font, resolution, fps, video_cli
     if clip_paths:
         click.echo(f"  Video clips: {clip_paths}")
 
-    from karaokefx.sync import detect_bpm
-
-    effective_bpm = bpm if bpm > 0 else detect_bpm(str(audio_path))
-    if bpm > 0:
-        click.echo(f"  BPM:       {effective_bpm:.1f} (forced)\n")
-    else:
-        click.echo(f"  BPM:       {effective_bpm:.1f} (auto-detected)\n")
-
     generate_video(
         audio_path=str(audio_path),
-        bpm=effective_bpm,
         lyrics_path=str(lyrics_path),
         output_path=output,
         background=background,
@@ -162,8 +153,6 @@ def preview(audio, lyrics):
     click.echo(f"\nTotal duration: {duration:.1f}s")
 
 
-
-
 @cli.command()
 @click.option("--input", "-i", required=True, help="Input video file (MP4)")
 @click.option("--output", "-o", required=True, help="Output GIF file")
@@ -180,12 +169,6 @@ def gifify(input, output, width, fps):
     click.echo(f"GIF saved to: {output}")
 
 
-
-def resolve_bg_to_clips(bg: str, video_clips: Optional[list]) -> Optional[list]:
-    """Back-compat helper — video-clips already parsed in generate."""
-    return video_clips
-
-
 @cli.command()
 @click.option("--input-dir", required=True, help="Directory containing audio files")
 @click.option("--output-dir", required=True, help="Directory for output videos")
@@ -200,7 +183,7 @@ def resolve_bg_to_clips(bg: str, video_clips: Optional[list]) -> Optional[list]:
 def batch(input_dir, output_dir, background, font, resolution, fps, video_clips, dim_opacity, workers):
     """Batch process multiple audio+lyrics pairs into karaoke videos."""
     from concurrent.futures import ThreadPoolExecutor, as_completed
-    from renderer.composit import generate_video
+    from .renderer.composit import generate_video
 
     input_path = Path(input_dir)
     output_path = Path(output_dir)

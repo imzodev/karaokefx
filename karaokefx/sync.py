@@ -1,6 +1,30 @@
 """LRC and plain-text lyrics parsing and word-level sync utilities."""
 
 import re
+
+import librosa
+
+
+def detect_bpm(audio_path: str) -> float:
+    """Detect BPM of an audio file using librosa.
+
+    Returns:
+        BPM as float (fallback: 120.0 if detection fails)
+    """
+    try:
+        y, sr = librosa.load(audio_path, sr=None, duration=None)
+        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+        return float(tempo) if tempo.size > 0 else 120.0
+    except Exception:
+        return 120.0
+
+
+def bpm_to_ms_per_beat(bpm: float) -> float:
+    """Convert BPM to milliseconds per beat."""
+    return 60_000.0 / bpm
+
+
+
 from dataclasses import dataclass, field
 from typing import List, Optional
 

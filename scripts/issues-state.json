@@ -38,7 +38,9 @@
     {
       "number": 6,
       "title": "Auto-detect BPM for better plain-text lyrics sync",
-      "status": "pending"
+      "status": "done",
+      "completed_at": "2026-05-05T10:15:00Z",
+      "notes": "BPM sync added: use `--bpm 120` to force a tempo, or leave at 0 for auto-detection via librosa. Beat-aware line distribution in parse_plain_text()."
     },
     {
       "number": 7,
@@ -48,6 +50,6 @@
       "notes": "Removed LycLine alias, removed unused num_lines param, replaced +30s with audio_duration_ms"
     }
   ],
-  "last_processed_index": 1,
+  "last_processed_index": 0,
   "cron_mode": true
 }

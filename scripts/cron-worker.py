@@ -619,6 +619,9 @@ HANDLERS = {
 }
 
 def main():
+    # Ensure repo root is on the Python path so 'renderer' and 'karaokefx' imports work
+    sys.path.insert(0, str(REPO_PATH))
+
     state = load_state()
     pending = [i for i in state["issues"] if i["status"] == "pending"]
 

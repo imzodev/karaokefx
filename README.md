@@ -24,7 +24,15 @@ audio.mp3 + song.lrc → 🎤 cool-karaoke-video.mp4
 
 ## Quick Start
 
-### 1. Install dependencies
+### 1. Create a virtual environment (recommended)
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate      # macOS/Linux
+# .\.venv\\Scripts\\activate   # Windows
+```
+
+### 2. Install dependencies
 
 ```bash
 pip install -r requirements.txt

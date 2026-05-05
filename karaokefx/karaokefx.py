@@ -119,8 +119,6 @@ def generate(audio, lyrics, output, background, font, resolution, fps, video_cli
 @click.option("-l", "--language", default=None, help="Language code (e.g. en, de)")
 def transcribe(audio, output, model, language):
     """Transcribe audio to LRC (lyrics) file using Whisper."""
-    import torch
-
     click.echo(f"Loading Whisper model: {model}...")
     click.echo(f"Transcribing: {audio}")
 

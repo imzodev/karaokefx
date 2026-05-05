@@ -25,7 +25,7 @@ def transcribe_audio(
     model_name: str = DEFAULT_WHISPER_MODEL,
     language: Optional[str] = None,
     task: str = "transcribe",
-) -> whisper.utils.Result:
+) -> dict:
     """Transcribe an audio file to text with word-level timestamps.
 
     Args:

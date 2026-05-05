@@ -153,5 +153,22 @@ def preview(audio, lyrics):
     click.echo(f"\nTotal duration: {duration:.1f}s")
 
 
+
+
+@cli.command()
+@click.option("--input", "-i", required=True, help="Input video file (MP4)")
+@click.option("--output", "-o", required=True, help="Output GIF file")
+@click.option("--width", default=480, type=int, help="Max width in pixels (default: 480)")
+@click.option("--fps", default=15, type=int, help="GIF frames per second (default: 15)")
+def gifify(input, output, width, fps):
+    """Convert a karaoke video to an animated GIF.
+
+    Uses two-pass FFmpeg palette generation for quality.
+    """
+    from .gif import gifify as _gifify
+    click.echo(f"Converting {input} → {output} (width={width}, fps={fps})...")
+    _gifify(input, output, width=width, fps=fps)
+    click.echo(f"GIF saved to: {output}")
+
 # Expose parse_timestamp for testing
 __all__ = ["parse_timestamp"]

@@ -12,7 +12,9 @@
     {
       "number": 2,
       "title": "Add singer avatar / thumbnail in corner",
-      "status": "pending"
+      "status": "done",
+      "completed_at": "2026-05-05T10:15:00Z",
+      "notes": "Error: No module named 'renderer'"
     },
     {
       "number": 3,
@@ -46,6 +48,6 @@
       "notes": "Removed LycLine alias, removed unused num_lines param, replaced +30s with audio_duration_ms"
     }
   ],
-  "last_processed_index": 3,
+  "last_processed_index": 1,
   "cron_mode": true
 }

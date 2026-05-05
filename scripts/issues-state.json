@@ -1,0 +1,47 @@
+{
+  "repo": "imzodev/karaokefx",
+  "local_path": "/home/node/.openclaw/workspace/karaokefx",
+  "issues": [
+    {
+      "number": 1,
+      "title": "Bundle a default font (Bebas Neue) so it works out of the box",
+      "status": "done",
+      "completed_at": "2026-05-05T10:15:00Z",
+      "notes": "Downloaded BebasNeue.ttf, added to config.py, updated text.py font paths"
+    },
+    {
+      "number": 2,
+      "title": "Add singer avatar / thumbnail in corner",
+      "status": "pending"
+    },
+    {
+      "number": 3,
+      "title": "Custom color themes per lyric line",
+      "status": "pending"
+    },
+    {
+      "number": 4,
+      "title": "Batch mode — process multiple songs in one run",
+      "status": "pending"
+    },
+    {
+      "number": 5,
+      "title": "Export as GIF (in addition to MP4)",
+      "status": "pending"
+    },
+    {
+      "number": 6,
+      "title": "Auto-detect BPM for better plain-text lyrics sync",
+      "status": "pending"
+    },
+    {
+      "number": 7,
+      "title": "Clean up sync.py — remove dead code and fix API",
+      "status": "done",
+      "completed_at": "2026-05-05T10:12:00Z",
+      "notes": "Removed LycLine alias, removed unused num_lines param, replaced +30s with audio_duration_ms"
+    }
+  ],
+  "last_processed_index": 1,
+  "cron_mode": true
+}

@@ -8,6 +8,7 @@ import numpy as np
 
 # Default font path — try to find a decent system font
 DEFAULT_FONT_PATHS = [
+    "/home/node/.openclaw/workspace/karaokefx/fonts/BebasNeue.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
     "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
     "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",

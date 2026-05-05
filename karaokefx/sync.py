@@ -27,7 +27,7 @@ class Lyrics:
     source_format: str  # "lrc" or "plain"
 
 
-def parse_lrc(lrc_path: str) -> Lyrics:
+def parse_lrc(lrc_path: str, audio_duration_ms: Optional[int] = None) -> Lyrics:
     """Parse an LRC file into Lyrics object.
 
     Supports:
@@ -70,11 +70,12 @@ def parse_lrc(lrc_path: str) -> Lyrics:
                 words=lines[i].words,
             )
 
-    # Last line gets a dummy end (override later with audio duration)
+    # Last line gets end_ms from audio duration if provided, else fallback
     if lines:
+        final_end = audio_duration_ms if audio_duration_ms else lines[-1].start_ms + 30_000
         lines[-1] = LyricLine(
             start_ms=lines[-1].start_ms,
-            end_ms=lines[-1].start_ms + 30_000,  # +30s fallback
+            end_ms=final_end,
             text=lines[-1].text,
             words=lines[-1].words,
         )
@@ -119,12 +120,7 @@ def parse_word_level(raw: str, pattern: re.Pattern) -> Optional[LyricLine]:
     return LyricLine(start_ms=start_ms, end_ms=end_ms, text=text_part, words=words)
 
 
-class LycLine(LyricLine):
-    """Backwards compat alias."""
-    pass
-
-
-def parse_plain_text(txt_path: str, num_lines: int, total_duration_ms: int) -> Lyrics:
+def parse_plain_text(txt_path: str, total_duration_ms: int) -> Lyrics:
     """Parse plain text file, distributing lines evenly across duration.
 
     Args:

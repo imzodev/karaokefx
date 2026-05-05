@@ -39,6 +39,9 @@ BACKGROUND_TYPES = [
 WHISPER_MODELS = ["tiny", "base", "small", "medium", "large"]
 DEFAULT_WHISPER_MODEL = "small"
 
+# Default font (bundled Bebas Neue)
+DEFAULT_FONT = FONTS_DIR / "BebasNeue.ttf"
+
 # Text defaults
 DEFAULT_FONT_SIZE = 72
 DEFAULT_TEXT_COLOR = "#FFFFFF"

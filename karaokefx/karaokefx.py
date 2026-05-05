@@ -141,7 +141,7 @@ def preview(audio, lyrics):
     if is_lrc:
         parsed = parse_lrc(str(lyrics_path))
     else:
-        parsed = parse_plain_text(str(lyrics_path), num_lines=None, total_duration_ms=total_ms)
+        parsed = parse_plain_text(str(lyrics_path), total_duration_ms=total_ms)
 
     click.echo(f"\n--- Lyrics Preview ({len(parsed.lines)} lines) ---")
     for line in parsed.lines:

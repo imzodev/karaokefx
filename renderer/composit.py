@@ -53,15 +53,15 @@ def _get_lyrics(audio_path: str, lyrics_path: str):
     from ..sync import parse_lrc, parse_plain_text
     import librosa
 
+    duration, _ = librosa.load(audio_path, sr=None, duration=None)
+    total_ms = int(duration * 1000)
+
     lyrics_ext = Path(lyrics_path).suffix.lower()
     if lyrics_ext == ".lrc":
-        lyrics = parse_lrc(lyrics_path)
+        lyrics = parse_lrc(lyrics_path, audio_duration_ms=total_ms)
     else:
-        duration, _ = librosa.load(audio_path, sr=None, duration=None)
-        total_ms = int(duration * 1000)
-        lyrics = parse_plain_text(lyrics_path, num_lines=None, total_duration_ms=total_ms)
+        lyrics = parse_plain_text(lyrics_path, total_duration_ms=total_ms)
 
-    duration, _ = librosa.load(audio_path, sr=None, duration=None)
     return lyrics, duration
 
 

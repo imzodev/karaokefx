@@ -111,8 +111,12 @@ def generate(audio, lyrics, output, background, font, resolution, fps, video_cli
 @click.option("-l", "--language", default=None, help="Language code (e.g. en, de)")
 def transcribe(audio, output, model, language):
     """Transcribe audio to LRC (lyrics) file using Whisper."""
-    click.echo(f"Loading Whisper model: {model}...")
-    click.echo(f"Transcribing: {audio}")
+    print(f"[KaraokeFX] Starting transcription...", flush=True)
+    print(f"[KaraokeFX]   audio:   {audio}", flush=True)
+    print(f"[KaraokeFX]   output:  {output}", flush=True)
+    print(f"[KaraokeFX]   model:   {model}", flush=True)
+    print(f"[KaraokeFX]   lang:    {language or 'auto-detect'}", flush=True)
+    print(flush=True)
 
     result = transcribe_audio(
         audio_path=audio,
@@ -121,7 +125,7 @@ def transcribe(audio, output, model, language):
     )
 
     result_to_lrc(result, output)
-    click.echo(f"LRC saved to: {output}")
+    print(f"\n[KaraokeFX] All done! LRC file: {output}", flush=True)
 
 
 @cli.command()

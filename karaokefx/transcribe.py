@@ -10,13 +10,18 @@ from .config import DEFAULT_WHISPER_MODEL
 def load_model(model_name: str = DEFAULT_WHISPER_MODEL) -> whisper.Whisper:
     """Load and return a Whisper model.
 
+    Downloads the model if not already cached. This may take a few minutes
+    for larger models (medium, large).
+
     Args:
         model_name: whisper model size (tiny, base, small, medium, large)
 
     Returns:
         Loaded Whisper model
     """
+    print(f"[Whisper] Downloading/loading model '{model_name}'...", flush=True)
     model = whisper.load_model(model_name)
+    print(f"[Whisper] Model ready.", flush=True)
     return model
 
 
@@ -45,7 +50,15 @@ def transcribe_audio(
         word_timestamps=True,
     )
 
+    language_note = f" language '{language}'" if language else " (auto-detect)"
+    print(f"[Whisper] Transcribing{audio_path}{language_note}...", flush=True)
+
     result = model.transcribe(audio_path, **options)
+
+    text_length = len(result.get("text", ""))
+    num_segments = len(result.get("segments", []))
+    print(f"[Whisper] Done — {num_segments} segments, {text_length} chars transcribed.", flush=True)
+
     return result
 
 
@@ -56,6 +69,7 @@ def result_to_lrc(result: dict, output_path: str) -> None:
         result: Whisper result dict
         output_path: path to write .lrc file
     """
+    lines_written = 0
     with open(output_path, "w", encoding="utf-8") as f:
         for segment in result.get("segments", []):
             start = segment["start"]
@@ -66,6 +80,7 @@ def result_to_lrc(result: dict, output_path: str) -> None:
             secs = start % 60
             timestamp = f"[{mins:02d}:{secs:05.2f}]"
             f.write(f"{timestamp}{text}\n")
+            lines_written += 1
 
             # Word-level entries on next lines
             for word in segment.get("words", []):
@@ -74,3 +89,5 @@ def result_to_lrc(result: dict, output_path: str) -> None:
                 w_secs = w_start % 60
                 w_text = word["word"].strip()
                 f.write(f"  <{w_mins:02d}:{w_secs:05.2f}>{w_text}\n")
+
+    print(f"[KaraokeFX] LRC saved to {output_path} ({lines_written} lyric lines).", flush=True)
